@@ -106,6 +106,8 @@ chmod +x setup.sh run.sh
 - **rumps**: macOSメニューバーUI
 - **sounddevice**: 音声録音
 - **scipy**: WAVファイル保存
+- **librosa**: 音声ファイル読み込み
 - **faster-whisper**: 音声認識（Whisperの高速実装）
 - **SpeechBrain**: 話者埋め込み（ECAPA-TDNN）
 - **scikit-learn**: クラスタリング（MeanShift）
+- **PyObjC**: 進捗ウィンドウ表示
