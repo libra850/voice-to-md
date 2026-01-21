@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+
+# macOS
+.DS_Store
+
+# Temporary files
+*.wav
+/tmp/
+
+# IDE
+.idea/
+.vscode/
+*.swp
