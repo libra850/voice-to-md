@@ -10,7 +10,6 @@ import librosa
 from .config import OUTPUT_DIR, TEMP_AUDIO_PATH, SAMPLE_RATE, DEVICE
 from .recorder import Recorder
 from .transcriber import Transcriber, TranscriptionSegment
-from .diarizer import Diarizer
 from .progress_window import ProgressWindow
 
 
@@ -18,15 +17,13 @@ class VoiceToMdApp(rumps.App):
     """メニューバーに常駐する音声文字起こしアプリケーション"""
 
     # 進捗の配分（合計100%）
-    PROGRESS_DIARIZE = 40  # 話者分離: 0-40%
-    PROGRESS_TRANSCRIBE = 55  # 文字起こし: 40-95%
+    PROGRESS_TRANSCRIBE = 95  # 文字起こし: 0-95%
     PROGRESS_FINALIZE = 5  # 最終処理: 95-100%
 
     def __init__(self) -> None:
         super().__init__(name="Voice to MD", title="🎤 Voice")
         self._recorder = Recorder()
         self._transcriber = Transcriber()
-        self._diarizer = Diarizer()
         self._progress_window = ProgressWindow()
         self._is_recording = False
         self._is_processing = False
@@ -102,28 +99,9 @@ class VoiceToMdApp(rumps.App):
             duration_sec = len(audio) / sr
             duration_str = self._format_duration(duration_sec)
 
-            # 話者分離（0-40%）
-            def diarize_progress(p: float) -> None:
-                progress = p * self.PROGRESS_DIARIZE
-                self._progress_window.set_status_with_progress(
-                    f"話者を分析中... ({int(p * 100)}%)",
-                    progress
-                )
-
-            try:
-                speaker_segments = self._diarizer.diarize(
-                    audio_path,
-                    progress_callback=diarize_progress
-                )
-                speaker_count = self._diarizer.get_speaker_count(speaker_segments)
-            except Exception as e:
-                print(f"話者分離エラー: {e}")
-                speaker_segments = [(0.0, duration_sec, "Speaker 1")]
-                speaker_count = 1
-
-            # 文字起こし（40-95%）
+            # 文字起こし（0-95%）
             def transcribe_progress(p: float) -> None:
-                progress = self.PROGRESS_DIARIZE + (p * self.PROGRESS_TRANSCRIBE)
+                progress = p * self.PROGRESS_TRANSCRIBE
                 self._progress_window.set_status_with_progress(
                     f"文字起こし中... ({int(p * 100)}%)",
                     progress
@@ -138,11 +116,17 @@ class VoiceToMdApp(rumps.App):
                 print(f"文字起こしエラー: {e}")
                 transcription_segments = []
 
-            # 結果を統合（95%）
-            self._progress_window.set_status_with_progress("結果を統合中...", 95)
-            merged_segments = self._assign_speakers(
-                transcription_segments, speaker_segments
-            )
+            # 結果を準備（95%）
+            self._progress_window.set_status_with_progress("結果を準備中...", 95)
+            merged_segments = [
+                {
+                    "speaker": "Speaker 1",
+                    "start": seg.start,
+                    "end": seg.end,
+                    "text": seg.text,
+                }
+                for seg in transcription_segments
+            ]
 
             # Markdownファイルを生成（97%）
             self._progress_window.set_status_with_progress("ファイルを保存中...", 97)
@@ -151,7 +135,7 @@ class VoiceToMdApp(rumps.App):
             output_path = OUTPUT_DIR / filename
 
             content = self._create_markdown_content(
-                now, duration_str, speaker_count, merged_segments
+                now, duration_str, 1, merged_segments
             )
             self._save_markdown(output_path, content)
 
@@ -178,28 +162,6 @@ class VoiceToMdApp(rumps.App):
 
         self.title = "🎤 Voice"
         self._is_processing = False
-
-    def _assign_speakers(
-        self,
-        transcription_segments: list[TranscriptionSegment],
-        speaker_segments: list[tuple[float, float, str]],
-    ) -> list[dict]:
-        """文字起こしセグメントに話者を割り当てる"""
-        result = []
-        for trans_seg in transcription_segments:
-            trans_start = trans_seg.start
-            speaker = "Unknown"
-            for spk_start, spk_end, spk_label in speaker_segments:
-                if spk_start <= trans_start < spk_end:
-                    speaker = spk_label
-                    break
-            result.append({
-                "speaker": speaker,
-                "start": trans_seg.start,
-                "end": trans_seg.end,
-                "text": trans_seg.text,
-            })
-        return result
 
     def _format_duration(self, seconds: float) -> str:
         """秒数を「XX分XX秒」形式にフォーマットする"""

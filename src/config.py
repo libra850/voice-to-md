@@ -33,9 +33,6 @@ LANGUAGE: str = "ja"
 OUTPUT_DIR: Path = Path.home() / "Desktop"
 TEMP_AUDIO_PATH: Path = Path("/tmp/voice_recording.wav")
 
-# 話者分離設定
-CHUNK_DURATION_SEC: int = 3  # 話者分離用のチャンク長（秒）
-
 # 進捗ウィンドウ設定
 WINDOW_WIDTH: int = 400
 WINDOW_HEIGHT: int = 150
