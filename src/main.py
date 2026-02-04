@@ -1,5 +1,6 @@
 """Voice to MD アプリケーションのエントリーポイント"""
 
+import subprocess
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -213,6 +214,18 @@ class VoiceToMdApp(rumps.App):
                 TEMP_AUDIO_PATH.unlink()
         except OSError:
             pass
+
+    @rumps.clicked("権利表記")
+    def show_licenses(self, _: rumps.MenuItem) -> None:
+        """サードパーティライセンス情報を表示する"""
+        licenses_path = Path(__file__).resolve().parent.parent / "THIRD_PARTY_LICENSES"
+        if licenses_path.exists():
+            subprocess.Popen(["open", str(licenses_path)])
+        else:
+            rumps.alert(
+                title="権利表記",
+                message="ライセンスファイルが見つかりませんでした。",
+            )
 
     @rumps.clicked("終了")
     def quit_app(self, _: rumps.MenuItem) -> None:
